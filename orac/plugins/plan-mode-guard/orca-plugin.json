@@ -1,0 +1,43 @@
+{
+  "manifestVersion": 2,
+  "id": "plan-mode-guard",
+  "name": "计划模式看守",
+  "version": "0.1.0",
+  "description": "Puts the plan-mode collaboration rules ahead of every prompt Orca submits to an agent, with Settings under the plugin to turn them off.",
+  "engines": {
+    "orca": ">=1.4.248"
+  },
+  "execution": "trusted-worker",
+  "pluginApi": 1,
+  "main": "src/worker.ts",
+  "capabilities": [
+    {
+      "kind": "settings:own"
+    }
+  ],
+  "contributes": {
+    "hooks": [
+      {
+        "event": "agent.prompt.before",
+        "onError": "pass"
+      }
+    ],
+    "settings": [
+      {
+        "key": "mode",
+        "title": "注入计划模式规则",
+        "description": "开：Orca 代发给 Agent 的提示（启动提示、orchestration 派发、orca terminal send 等）前自动附加计划模式规则。关：原样发送。你在终端里亲手输入的提示不受影响。",
+        "type": "string",
+        "default": "plan",
+        "enum": [
+          "plan",
+          "off"
+        ],
+        "enumLabels": [
+          "开（附加规则）",
+          "关（原样发送）"
+        ]
+      }
+    ]
+  }
+}

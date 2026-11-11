@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agent-tools-library · 插件目录</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --text: #1f2328;
+    --muted: #656d76;
+    --border: #d8dee4;
+    --accent: #0969da;
+    --chip: #eef2f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --chip: #21262d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem 1rem 4rem;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.6 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+  .sub { color: var(--muted); margin: 0 0 1.5rem; }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem;
+  }
+  .controls input, .controls select {
+    padding: .45rem .7rem; font: inherit; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  }
+  .controls input { flex: 1; min-width: 200px; }
+  details {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 1rem; overflow: hidden;
+  }
+  summary {
+    cursor: pointer; padding: .8rem 1rem; font-weight: 600;
+    display: flex; align-items: center; gap: .6rem; user-select: none;
+  }
+  summary .path { color: var(--muted); font-weight: 400; font-size: .85em; font-family: ui-monospace, Consolas, monospace; }
+  .count {
+    margin-left: auto; font-size: .8em; font-weight: 400;
+    background: var(--chip); color: var(--muted);
+    border-radius: 999px; padding: .1rem .55rem;
+  }
+  .cats { border-top: 1px solid var(--border); }
+  .cat { padding: .75rem 1rem; border-bottom: 1px solid var(--border); }
+  .cat:last-child { border-bottom: none; }
+  .cat h3 {
+    margin: 0 0 .5rem; font-size: .8rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+  }
+  ul.items { list-style: none; margin: 0; padding: 0; }
+  ul.items li {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem;
+    padding: .35rem 0;
+  }
+  ul.items li a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  ul.items li a:hover { text-decoration: underline; }
+  ul.items li .desc { color: var(--muted); font-size: .9em; }
+  .empty { color: var(--muted); font-style: italic; font-size: .9em; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>agent-tools-library</h1>
+  <p class="sub">自用 Agent 插件目录 · 按 Agent / 类别组织 · 点击插件查看其 README（作用 &amp; 安装）</p>
+
+  <div class="controls">
+    <input id="q" type="search" placeholder="搜索插件名称或说明…" autocomplete="off">
+    <select id="agentFilter"><option value="">全部 Agent</option></select>
+    <select id="catFilter">
+      <option value="">全部类别</option>
+      <option value="skills">Skill</option>
+      <option value="plugins">插件</option>
+      <option value="modes">模式</option>
+    </select>
+  </div>
+
+  <div id="app"></div>
+</div>
+
+<script>
+// ============================================================
+// 数据区：新增/删除插件时只改这里（与 README.md 的「插件总览」保持一致）
+//   name  : 插件目录名，链接指向 <agent>/<cat>/<name>/README.md
+//   desc  : 一句话说明作用
+// ============================================================
+const CATEGORIES = [
+  { key: 'skills',  label: 'Skill' },
+  { key: 'plugins', label: '插件' },
+  { key: 'modes',   label: '模式' },
+];
+
+const AGENTS = [
+  {
+    key: 'orac',
+    name: 'Orca',
+    items: [
+      { cat: 'plugins', name: 'plan-mode-guard', desc: 'Orca 下发给 Agent 的提示自动附加「计划模式」协作规则' },
+    ],
+  },
+  {
+    key: 'deepseek',
+    name: 'DeepSeek',
+    items: [],
+  },
+];
+
+// ============================================================
+// 渲染
+// ============================================================
+const app = document.getElementById('app');
+const qInput = document.getElementById('q');
+const agentSel = document.getElementById('agentFilter');
+const catSel = document.getElementById('catFilter');
+
+AGENTS.forEach(a => {
+  const o = document.createElement('option');
+  o.value = a.key;
+  o.textContent = a.name;
+  agentSel.appendChild(o);
+});
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function render() {
+  const q = qInput.value.trim().toLowerCase();
+  const agentFilter = agentSel.value;
+  const catFilter = catSel.value;
+  app.innerHTML = '';
+
+  AGENTS
+    .filter(a => !agentFilter || a.key === agentFilter)
+    .forEach(agent => {
+      const cats = CATEGORIES
+        .filter(c => !catFilter || c.key === catFilter)
+        .map(cat => ({
+          ...cat,
+          items: agent.items.filter(it =>
+            it.cat === cat.key &&
+            (!q || it.name.toLowerCase().includes(q) || (it.desc || '').toLowerCase().includes(q))
+          ),
+        }));
+
+      const total = cats.reduce((n, c) => n + c.items.length, 0);
+      if ((q || catFilter) && total === 0) return;
+
+      const details = document.createElement('details');
+      details.open = true;
+      details.innerHTML = `
+        <summary>
+          <span>${esc(agent.name)}</span>
+          <span class="path">${esc(agent.key)}/</span>
+          <span class="count">${total}</span>
+        </summary>
+        <div class="cats">
+          ${cats.map(cat => `
+            <div class="cat">
+              <h3>${esc(cat.label)} <span class="path">${esc(cat.key)}/</span></h3>
+              ${cat.items.length
+                ? `<ul class="items">${cat.items.map(it => `
+                    <li>
+                      <a href="${esc(agent.key)}/${esc(it.cat)}/${esc(it.name)}/README.md">${esc(it.name)}</a>
+                      <span class="desc">${esc(it.desc || '')}</span>
+                    </li>`).join('')}
+                  </ul>`
+                : `<div class="empty">暂无</div>`}
+            </div>
+          `).join('')}
+        </div>`;
+      app.appendChild(details);
+    });
+
+  if (!app.children.length) {
+    app.innerHTML = '<p class="empty">没有匹配的插件。</p>';
+  }
+}
+
+[qInput, agentSel, catSel].forEach(el => el.addEventListener('input', render));
+render();
+</script>
+</body>
+</html>
